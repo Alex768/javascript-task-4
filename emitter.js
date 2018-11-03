@@ -115,7 +115,7 @@ function getEmitter() {
 function getHandlersData(event, handlersStorage) {
     let eventHandlers = [];
     Object.keys(handlersStorage).filter(name => {
-        return event === name || event.includes(name + '.');
+        return event === name || event.indexOf(name + '.') === 0;
     })
         .sort()
         .reverse() // сортировка в порядке slide.funny, slide
@@ -151,7 +151,7 @@ function saveHandler(event, context, handler, handlersStorage) {
  */
 function removeHandler(event, context, handlersStorage) {
     Object.keys(handlersStorage).forEach(eventName => {
-        if (event !== eventName && !eventName.includes(event + '.')) {
+        if (event !== eventName && eventName.indexOf(event + '.') !== 0) {
             return;
         }
         handlersStorage[eventName].forEach((data, index, array) => {
