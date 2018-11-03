@@ -5,13 +5,14 @@
  * Реализованы методы several и through
  */
 const isStar = true;
-const HANDLERS = {};
 
 /**
  * Возвращает новый emitter
  * @returns {Object}
  */
 function getEmitter() {
+    const HANDLERS_STORAGE = {};
+
     return {
 
         /**
@@ -22,7 +23,7 @@ function getEmitter() {
          * @returns {Object}
          */
         on: function (event, context, handler) {
-            saveHandler(event, context, handler);
+            saveHandler(event, context, handler, HANDLERS_STORAGE);
 
             return this;
         },
@@ -34,7 +35,7 @@ function getEmitter() {
          * @returns {Object}
          */
         off: function (event, context) {
-            removeHandler(event, context);
+            removeHandler(event, context, HANDLERS_STORAGE);
 
             return this;
         },
@@ -45,7 +46,7 @@ function getEmitter() {
          * @returns {Object}
          */
         emit: function (event) {
-            getHandlersData(event).forEach(data => {
+            getHandlersData(event, HANDLERS_STORAGE).forEach(data => {
                 data.handler.call(data.context);
             });
 
@@ -71,7 +72,7 @@ function getEmitter() {
                 handler.call(context);
                 counter--;
                 if (counter <= 0) {
-                    HANDLERS[event].forEach((data, index, array) => {
+                    HANDLERS_STORAGE[event].forEach((data, index, array) => {
                         if (data.handler === wrappedHandler) {
                             array.splice(index, 1);
                         }
@@ -108,17 +109,18 @@ function getEmitter() {
 /**
  * Возвращает массив объектов с данными: context и handler
  * @param {String} event - событие
+ * @param {Object} handlersStorage - хранилище обработчиков
  * @returns {Array}
  */
-function getHandlersData(event) {
+function getHandlersData(event, handlersStorage) {
     let eventHandlers = [];
-    Object.keys(HANDLERS).filter(name => {
+    Object.keys(handlersStorage).filter(name => {
         return event === name || event.includes(name + '.');
     })
         .sort()
         .reverse() // сортировка в порядке slide.funny, slide
         .forEach(name => {
-            eventHandlers = eventHandlers.concat(HANDLERS[name]);
+            eventHandlers = eventHandlers.concat(handlersStorage[name]);
         });
 
     return eventHandlers;
@@ -129,12 +131,13 @@ function getHandlersData(event) {
  * @param {String} event - событие
  * @param {Object} context - контекст
  * @param {Function} handler - обработчик
+ * @param {Object} handlersStorage - хранилище обработчиков
  */
-function saveHandler(event, context, handler) {
-    if (!HANDLERS.hasOwnProperty(event)) {
-        HANDLERS[event] = [];
+function saveHandler(event, context, handler, handlersStorage) {
+    if (!handlersStorage.hasOwnProperty(event)) {
+        handlersStorage[event] = [];
     }
-    HANDLERS[event].push({
+    handlersStorage[event].push({
         context: context,
         handler: handler
     });
@@ -144,16 +147,18 @@ function saveHandler(event, context, handler) {
  * Удаляет обработчики
  * @param {String} event - событие
  * @param {Object} context - контекст
+ * @param {Object} handlersStorage - хранилище обработчиков
  */
-function removeHandler(event, context) {
-    Object.keys(HANDLERS).forEach(eventName => {
-        if (event === eventName || eventName.includes(event + '.')) {
-            HANDLERS[eventName].forEach((data, index, array) => {
-                if (data.context === context) {
-                    array.splice(index, 1);
-                }
-            });
+function removeHandler(event, context, handlersStorage) {
+    Object.keys(handlersStorage).forEach(eventName => {
+        if (event !== eventName && !eventName.includes(event + '.')) {
+            return;
         }
+        handlersStorage[eventName].forEach((data, index, array) => {
+            if (data.context === context) {
+                array.splice(index, 1);
+            }
+        });
     });
 }
 
